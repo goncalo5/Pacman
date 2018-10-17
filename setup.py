@@ -1,8 +1,20 @@
 #!/usr/bin/env python
 from os import path
 import pygame as pg
-from settings import GAME, SCREEN, PLAYER
+from settings import GAME, SCREEN, PLAYER, WALLS
 vec = pg.math.Vector2
+
+
+class Wall(pg.sprite.Sprite):
+    def __init__(self, game, x, y, width, height):
+        self._layer = WALLS['layer']
+        self.groups = game.all_sprites, game.walls
+        super(Wall, self).__init__(self.groups)
+        self.game = game
+        self.image = pg.Surface((width, height))
+        self.image.fill(WALLS['color'])
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (x, y)
 
 
 class Player(pg.sprite.Sprite):
@@ -16,7 +28,7 @@ class Player(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.pos = vec(x, y)
         self.vel = vec(0, 0)
-        self.direction = 'up'
+        self.direction = 'right'
 
         self.rect.topleft = self.pos
 
@@ -52,12 +64,15 @@ class Player(pg.sprite.Sprite):
 class Game(object):
     def __init__(self):
         pg.init()
-        self.screen = pg.display.set_mode((SCREEN['WIDTH'], SCREEN['HEIGHT']))
+        # variables
+        self.tilesize = GAME['TILESIZE']
+        self.width = SCREEN['WIDTH']
+        self.height = SCREEN['HEIGHT']
+        self.cmd_key_down = False
+
+        self.screen = pg.display.set_mode((self.width, self.height))
         pg.display.set_caption(GAME['NAME'])
         self.clock = pg.time.Clock()
-
-        # variables
-        self.cmd_key_down = False
 
         self.load_data()
         self.new()
@@ -72,7 +87,14 @@ class Game(object):
     def new(self):
         # start a new game
         self.all_sprites = pg.sprite.LayeredUpdates()
+        self.walls = pg.sprite.Group()
         self.player = Player(self, 100, 100)
+        Wall(self, 0, 0, self.width, self.tilesize)
+        Wall(self, 0, self.height - self.tilesize, self.width, self.tilesize)
+        Wall(self, 0, self.tilesize,
+             self.tilesize, self.height - 2 * self.tilesize)
+        Wall(self, self.width - self.tilesize, self.tilesize,
+             self.tilesize, self.height - 2 * self.tilesize)
 
     def run(self):
         # game loop - set  self.playing = False to end the game

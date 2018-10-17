@@ -13,7 +13,6 @@ GAME = {
     'TILESIZE': 32
 }
 
-# Background:
 
 # Screen
 SCREEN = {
@@ -28,4 +27,11 @@ PLAYER = {
     'LAYER': 2,
     'color': YELLOW,
     'speed': 10
+}
+
+
+# Walls:
+WALLS = {
+    'layer': 2,
+    'color': GREEN
 }
