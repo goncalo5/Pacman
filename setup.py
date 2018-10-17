@@ -69,10 +69,64 @@ class Player(pg.sprite.Sprite):
     def update_for_draw(self):
         self.rect.topleft = self.pos
 
+#####################################################
+# Collisions:
+#
+
+
+def convert_direction_to_inverse(direction):
+    if direction == 'left':
+        return 'right'
+    if direction == 'right':
+        return 'left'
+    if direction == 'down':
+        return 'up'
+    if direction == 'up':
+        return 'down'
+
+
+def check_possibles_moves(player, walls):
+    print 'check_possibles_moves'
+    print 4, player.rect
+    list_of_possibles_moves = []
+    # check up:
+    player.rect.y -= 1
+    if not pg.sprite.spritecollide(player, walls, False):
+        list_of_possibles_moves.append('up')
+    player.rect.y += 1
+    # check down:
+    player.rect.y += 1
+    if not pg.sprite.spritecollide(player, walls, False):
+        list_of_possibles_moves.append('down')
+    player.rect.y -= 1
+    # check right:
+    player.rect.x += 1
+    if not pg.sprite.spritecollide(player, walls, False):
+        list_of_possibles_moves.append('right')
+    player.rect.x -= 1
+    # check left:
+    player.rect.x -= 1
+    if not pg.sprite.spritecollide(player, walls, False):
+        list_of_possibles_moves.append('left')
+    player.rect.x += 1
+    print list_of_possibles_moves, player.direction
+    try:
+        list_of_possibles_moves.remove(player.direction)
+    except ValueError:
+        pass
+    try:
+        list_of_possibles_moves.remove(
+            convert_direction_to_inverse(player.direction))
+    except ValueError:
+        pass
+    return list_of_possibles_moves
+
 
 def handle_collisions(player, walls):
     print 'handle_collisions'
+    list_of_possibles_moves = check_possibles_moves(player, walls)
     player.rect.topleft = player.pos
+    print list_of_possibles_moves
     hits = pg.sprite.spritecollide(player, walls, False)
     if hits:
         print 'hits', hits, player.direction, player.next_direction
@@ -97,7 +151,12 @@ def handle_collisions(player, walls):
             # if player.direction == player.next_direction:
             #     player.next_direction = 'right'
             # player.direction = player.next_direction
-        player.direction = 'stop'
+        print 5, list_of_possibles_moves, player.direction
+        player.direction = list_of_possibles_moves[0]
+        # player.direction = 'stop'
+#
+# End of Collisions
+####################################################
 
 
 class Game(object):
