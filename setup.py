@@ -29,6 +29,7 @@ class Player(pg.sprite.Sprite):
         self.pos = vec(x, y)
         self.vel = vec(0, 0)
         self.direction = 'right'
+        self.next_direction = 'down'
 
         self.rect.topleft = self.pos
 
@@ -44,13 +45,13 @@ class Player(pg.sprite.Sprite):
     def events(self):
         keys = pg.key.get_pressed()
         if keys[pg.K_LEFT]:
-            self.direction = 'left'
+            self.next_direction = 'left'
         if keys[pg.K_RIGHT]:
-            self.direction = 'right'
+            self.next_direction = 'right'
         if keys[pg.K_UP]:
-            self.direction = 'up'
+            self.next_direction = 'up'
         if keys[pg.K_DOWN]:
-            self.direction = 'down'
+            self.next_direction = 'down'
 
     def update(self):
         self.vel = self.convert_direction2vel()
@@ -59,6 +60,25 @@ class Player(pg.sprite.Sprite):
         if self.pos.x > SCREEN['WIDTH']:
             self.pos.x = 0
         self.rect.topleft = self.pos
+
+
+def handle_collisions(player, walls):
+    hits = pg.sprite.spritecollide(player, walls, False)
+    if hits:
+        print hits
+        wall = hits[0]
+        if player.direction == 'right':
+            player.pos.x = wall.rect.left - player.rect.width
+            player.direction = player.next_direction
+        elif player.direction == 'down':
+            player.pos.y = wall.rect.top - player.rect.height
+            player.direction = player.next_direction
+        elif player.direction == 'left':
+            player.pos.x = wall.rect.right
+            player.direction = player.next_direction
+        elif player.direction == 'up':
+            player.pos.y = wall.rect.bottom
+            player.direction = player.next_direction
 
 
 class Game(object):
@@ -129,6 +149,7 @@ class Game(object):
     def update(self):
         # update portion of the game loop
         self.all_sprites.update()
+        handle_collisions(self.player, self.walls)
 
     def draw(self):
         self.screen.fill(SCREEN['BGCOLOR'])
