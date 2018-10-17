@@ -38,20 +38,25 @@ class Player(pg.sprite.Sprite):
             'right': (PLAYER['speed'], 0),
             'left': (-PLAYER['speed'], 0),
             'up': (0, -PLAYER['speed']),
-            'down': (0, PLAYER['speed'])
+            'down': (0, PLAYER['speed']),
+            'stop': (0, 0)
         }
         return vec(converter[self.direction])
 
     def events(self):
         keys = pg.key.get_pressed()
-        if keys[pg.K_LEFT]:
+        if keys[pg.K_LEFT] and self.direction not in ['right', 'left']:
             self.next_direction = 'left'
-        if keys[pg.K_RIGHT]:
+            self.direction = 'left'
+        if keys[pg.K_RIGHT] and self.direction not in ['right', 'left']:
             self.next_direction = 'right'
-        if keys[pg.K_UP]:
+            self.direction = 'right'
+        if keys[pg.K_UP] and self.direction not in ['up', 'down']:
             self.next_direction = 'up'
-        if keys[pg.K_DOWN]:
+            self.direction = 'up'
+        if keys[pg.K_DOWN] and self.direction not in ['up', 'down']:
             self.next_direction = 'down'
+            self.direction = 'down'
 
     def update(self):
         self.vel = self.convert_direction2vel()
@@ -65,19 +70,35 @@ class Player(pg.sprite.Sprite):
 def handle_collisions(player, walls):
     hits = pg.sprite.spritecollide(player, walls, False)
     if hits:
-        print hits
+        print hits, player.direction, player.next_direction
         wall = hits[0]
         if player.direction == 'right':
             player.pos.x = wall.rect.left - player.rect.width
+            if player.direction != player.next_direction:
+                pass
+            else:
+                player.next_direction = 'down'
             player.direction = player.next_direction
         elif player.direction == 'down':
             player.pos.y = wall.rect.top - player.rect.height
+            if player.direction != player.next_direction:
+                pass
+            else:
+                player.next_direction = 'left'
             player.direction = player.next_direction
         elif player.direction == 'left':
             player.pos.x = wall.rect.right
+            if player.direction != player.next_direction:
+                pass
+            else:
+                player.next_direction = 'up'
             player.direction = player.next_direction
         elif player.direction == 'up':
             player.pos.y = wall.rect.bottom
+            if player.direction != player.next_direction:
+                pass
+            else:
+                player.next_direction = 'right'
             player.direction = player.next_direction
 
 
