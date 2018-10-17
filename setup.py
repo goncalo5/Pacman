@@ -30,15 +30,16 @@ class Player(pg.sprite.Sprite):
         self.vel = vec(0, 0)
         self.direction = 'right'
         self.next_direction = 'down'
+        self.update_time = self.game.now
 
         self.rect.topleft = self.pos
 
     def convert_direction2vel(self):
         converter = {
-            'right': (PLAYER['speed'], 0),
-            'left': (-PLAYER['speed'], 0),
-            'up': (0, -PLAYER['speed']),
-            'down': (0, PLAYER['speed']),
+            'right': (self.game.tilesize, 0),
+            'left': (-self.game.tilesize, 0),
+            'up': (0, -self.game.tilesize),
+            'down': (0, self.game.tilesize),
             'stop': (0, 0)
         }
         return vec(converter[self.direction])
@@ -59,11 +60,14 @@ class Player(pg.sprite.Sprite):
             self.direction = 'down'
 
     def update(self):
-        self.vel = self.convert_direction2vel()
-        self.events()
-        self.pos += self.vel
-        if self.pos.x > self.game.width:
-            self.pos.x = 0
+        if self.game.now - self.update_time > PLAYER['time_to_move']:
+            self.update_time = self.game.now
+            # self.pos += self.game.tilesize
+            self.pos += self.convert_direction2vel()
+        # self.events()
+        # self.pos += self.vel
+        # if self.pos.x > self.game.width:
+        #     self.pos.x = 0
         self.rect.topleft = self.pos
 
 
@@ -74,30 +78,22 @@ def handle_collisions(player, walls):
         wall = hits[0]
         if player.direction == 'right':
             player.pos.x = wall.rect.left - player.rect.width
-            if player.direction != player.next_direction:
-                pass
-            else:
+            if player.direction == player.next_direction:
                 player.next_direction = 'down'
             player.direction = player.next_direction
         elif player.direction == 'down':
             player.pos.y = wall.rect.top - player.rect.height
-            if player.direction != player.next_direction:
-                pass
-            else:
+            if player.direction == player.next_direction:
                 player.next_direction = 'left'
             player.direction = player.next_direction
         elif player.direction == 'left':
             player.pos.x = wall.rect.right
-            if player.direction != player.next_direction:
-                pass
-            else:
+            if player.direction == player.next_direction:
                 player.next_direction = 'up'
             player.direction = player.next_direction
         elif player.direction == 'up':
             player.pos.y = wall.rect.bottom
-            if player.direction != player.next_direction:
-                pass
-            else:
+            if player.direction == player.next_direction:
                 player.next_direction = 'right'
             player.direction = player.next_direction
 
@@ -113,6 +109,7 @@ class Game(object):
 
         pg.display.set_caption(GAME['NAME'])
         self.clock = pg.time.Clock()
+        self.now = pg.time.get_ticks()
 
         self.load_data()
         self.new()
@@ -136,22 +133,19 @@ class Game(object):
 
         for i, line in enumerate(self.map_list):
             for j, value in enumerate(line[:-1]):
+                x = j * self.tilesize
+                y = i * self.tilesize
                 if value == 'w':
-                    Wall(self, j * self.tilesize, i * self.tilesize,
-                         self.tilesize, self.tilesize)
-        self.player = Player(self, 100, 100)
-        # Wall(self, 0, 0, self.width, self.tilesize)
-        # Wall(self, 0, self.height - self.tilesize, self.width, self.tilesize)
-        # Wall(self, 0, self.tilesize,
-        #      self.tilesize, self.height - 2 * self.tilesize)
-        # Wall(self, self.width - self.tilesize, self.tilesize,
-        #      self.tilesize, self.height - 2 * self.tilesize)
+                    Wall(self, x, y, self.tilesize, self.tilesize)
+                elif value == 'p':
+                    self.player = Player(self, x, y)
 
     def run(self):
         # game loop - set  self.playing = False to end the game
         self.running = True
         while self.running:
             self.clock.tick(SCREEN['FPS'])
+            self.now = pg.time.get_ticks()
             self.events()
             self.update()
             self.draw()

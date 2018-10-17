@@ -26,7 +26,8 @@ SCREEN = {
 PLAYER = {
     'LAYER': 2,
     'color': YELLOW,
-    'speed': 10
+    'speed': 8,
+    'time_to_move': 1000
 }
 
 
