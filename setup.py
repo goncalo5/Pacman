@@ -2,6 +2,7 @@
 from os import path
 import pygame as pg
 from settings import GAME, SCREEN, PLAYER
+vec = pg.math.Vector2
 
 
 class Player(pg.sprite.Sprite):
@@ -13,23 +14,24 @@ class Player(pg.sprite.Sprite):
         self.image = pg.Surface((GAME['TILESIZE'], GAME['TILESIZE']))
         self.image.fill(PLAYER['color'])
         self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
-        self.dx = 0
+        self.pos = vec(x, y)
+        self.vel = vec(0, 0)
+        self.rect.topleft = self.pos
 
     def events(self):
-        self.dx = 0
+        self.vel = vec(0, 0)
         keys = pg.key.get_pressed()
         if keys[pg.K_LEFT]:
-            self.dx = -5
+            self.vel.x = -5
         if keys[pg.K_RIGHT]:
-            self.dx = 5
+            self.vel.x = 5
 
     def update(self):
         self.events()
-        self.rect.x += self.dx
-        if self.rect.left > SCREEN['WIDTH']:
-            self.rect.right = 0
+        self.pos.x += self.vel.x
+        if self.pos.x > SCREEN['WIDTH']:
+            self.pos.x = 0
+        self.rect.topleft = self.pos
 
 
 class Game(object):
