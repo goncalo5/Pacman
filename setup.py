@@ -62,7 +62,7 @@ class Player(pg.sprite.Sprite):
         self.vel = self.convert_direction2vel()
         self.events()
         self.pos += self.vel
-        if self.pos.x > SCREEN['WIDTH']:
+        if self.pos.x > self.game.width:
             self.pos.x = 0
         self.rect.topleft = self.pos
 
@@ -107,11 +107,10 @@ class Game(object):
         pg.init()
         # variables
         self.tilesize = GAME['TILESIZE']
-        self.width = SCREEN['WIDTH']
-        self.height = SCREEN['HEIGHT']
+        # self.width = SCREEN['WIDTH']
+        # self.height = SCREEN['HEIGHT']
         self.cmd_key_down = False
 
-        self.screen = pg.display.set_mode((self.width, self.height))
         pg.display.set_caption(GAME['NAME'])
         self.clock = pg.time.Clock()
 
@@ -129,13 +128,24 @@ class Game(object):
         # start a new game
         self.all_sprites = pg.sprite.LayeredUpdates()
         self.walls = pg.sprite.Group()
+        with open('map.txt') as map:
+            self.map_list = map.readlines()
+            self.width = (len(self.map_list[0]) - 1) * self.tilesize
+            self.height = (len(self.map_list)) * self.tilesize
+        self.screen = pg.display.set_mode((self.width, self.height))
+
+        for i, line in enumerate(self.map_list):
+            for j, value in enumerate(line[:-1]):
+                if value == 'w':
+                    Wall(self, j * self.tilesize, i * self.tilesize,
+                         self.tilesize, self.tilesize)
         self.player = Player(self, 100, 100)
-        Wall(self, 0, 0, self.width, self.tilesize)
-        Wall(self, 0, self.height - self.tilesize, self.width, self.tilesize)
-        Wall(self, 0, self.tilesize,
-             self.tilesize, self.height - 2 * self.tilesize)
-        Wall(self, self.width - self.tilesize, self.tilesize,
-             self.tilesize, self.height - 2 * self.tilesize)
+        # Wall(self, 0, 0, self.width, self.tilesize)
+        # Wall(self, 0, self.height - self.tilesize, self.width, self.tilesize)
+        # Wall(self, 0, self.tilesize,
+        #      self.tilesize, self.height - 2 * self.tilesize)
+        # Wall(self, self.width - self.tilesize, self.tilesize,
+        #      self.tilesize, self.height - 2 * self.tilesize)
 
     def run(self):
         # game loop - set  self.playing = False to end the game
