@@ -16,19 +16,34 @@ class Player(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.pos = vec(x, y)
         self.vel = vec(0, 0)
+        self.direction = 'up'
+
         self.rect.topleft = self.pos
 
+    def convert_direction2vel(self):
+        converter = {
+            'right': (PLAYER['speed'], 0),
+            'left': (-PLAYER['speed'], 0),
+            'up': (0, -PLAYER['speed']),
+            'down': (0, PLAYER['speed'])
+        }
+        return vec(converter[self.direction])
+
     def events(self):
-        self.vel = vec(0, 0)
         keys = pg.key.get_pressed()
         if keys[pg.K_LEFT]:
-            self.vel.x = -5
+            self.direction = 'left'
         if keys[pg.K_RIGHT]:
-            self.vel.x = 5
+            self.direction = 'right'
+        if keys[pg.K_UP]:
+            self.direction = 'up'
+        if keys[pg.K_DOWN]:
+            self.direction = 'down'
 
     def update(self):
+        self.vel = self.convert_direction2vel()
         self.events()
-        self.pos.x += self.vel.x
+        self.pos += self.vel
         if self.pos.x > SCREEN['WIDTH']:
             self.pos.x = 0
         self.rect.topleft = self.pos

@@ -26,5 +26,6 @@ SCREEN = {
 # Player
 PLAYER = {
     'LAYER': 2,
-    'color': YELLOW
+    'color': YELLOW,
+    'speed': 10
 }
