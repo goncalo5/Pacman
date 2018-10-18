@@ -2,10 +2,10 @@ wwwwwwwwww
 w........w
 w.wwwwww.w
 w.w....w.w
-w........w
-w.w....w.w
-wpw....w.w
-w........w
+w...ww...w
+w.w.ww.w.w
+wpw.ww.w.w
+w...ww...w
 w.w....w.w
 w.wwwwww.w
 w........w
