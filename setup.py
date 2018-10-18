@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from os import path
 import pygame as pg
-from settings import GAME, SCREEN, PLAYER, WALLS
+from settings import GAME, SCREEN, WALLS, PLAYER, MOB
 vec = pg.math.Vector2
 
 
@@ -18,13 +18,14 @@ class Wall(pg.sprite.Sprite):
 
 
 class Animated(pg.sprite.Sprite):
-    def __init__(self, game, x, y):
-        self._layer = PLAYER['LAYER']
-        self.groups = game.all_sprites
+    def __init__(self, game, x, y, group, groups):
+        self._layer = group['layer']
+        self.groups = groups
         super(Animated, self).__init__(self.groups)
         self.game = game
+        self.group = group
         self.image = pg.Surface((GAME['TILESIZE'], GAME['TILESIZE']))
-        self.image.fill(PLAYER['color'])
+        self.image.fill(group['color'])
         self.rect = self.image.get_rect()
         self.pos = vec(x, y)
         self.vel = vec(0, 0)
@@ -45,21 +46,25 @@ class Animated(pg.sprite.Sprite):
         return vec(converter[self.direction])
 
     def update(self):
-        if self.game.now - self.update_time > PLAYER['time_to_move']:
+        if self.game.now - self.update_time > self.group['time_to_move']:
             self.update_time = self.game.now
             self.vel = self.convert_direction2vel()
             self.pos += self.vel
-        self.events()
 
     def update_for_draw(self):
         self.rect.topleft = self.pos
 
 
+class Mob(Animated):
+    def __init__(self, game, x, y):
+        groups = game.all_sprites, game.mobs
+        super(Mob, self).__init__(game, x, y, MOB, groups)
+
+
 class Player(Animated):
     def __init__(self, game, x, y):
-        self._layer = PLAYER['LAYER']
-        self.groups = game.all_sprites
-        super(Player, self).__init__(game, x, y)
+        groups = game.all_sprites
+        super(Player, self).__init__(game, x, y, PLAYER, groups)
 
     def events(self):
         keys = pg.key.get_pressed()
@@ -83,17 +88,12 @@ class Player(Animated):
             self.pos += self.vel
         self.events()
 
-    def update_for_draw(self):
-        self.rect.topleft = self.pos
-
 #####################################################
 # Collisions:
 #
 
 
 def check_possibles_moves(player, walls):
-    print 'check_possibles_moves'
-    print 4, player.rect
     list_of_possibles_moves = []
     # check up:
     player.rect.y -= 1
@@ -115,7 +115,6 @@ def check_possibles_moves(player, walls):
     if not pg.sprite.spritecollide(player, walls, False):
         list_of_possibles_moves.append('left')
     player.rect.x += 1
-    print list_of_possibles_moves, player.direction
     try:
         list_of_possibles_moves.remove(player.direction)
     except ValueError:
@@ -140,35 +139,19 @@ def convert_direction_to_inverse(direction):
 
 
 def handle_collisions(player, walls):
-    print 'handle_collisions'
     list_of_possibles_moves = check_possibles_moves(player, walls)
     player.rect.topleft = player.pos
-    print 2, list_of_possibles_moves
     hits = pg.sprite.spritecollide(player, walls, False)
     if hits:
-        print 3, 'hits', hits, player.direction, player.next_direction
         wall = hits[0]
         if player.direction == 'right':
             player.pos.x = wall.rect.left - player.rect.width
-            # if player.direction == player.next_direction:
-            #     player.next_direction = 'down'
-            # player.direction = player.next_direction
         elif player.direction == 'down':
             player.pos.y = wall.rect.top - player.rect.height
-            # if player.direction == player.next_direction:
-            #     player.next_direction = 'left'
-            # player.direction = player.next_direction
         elif player.direction == 'left':
             player.pos.x = wall.rect.right
-            # if player.direction == player.next_direction:
-            #     player.next_direction = 'up'
-            # player.direction = player.next_direction
         elif player.direction == 'up':
             player.pos.y = wall.rect.bottom
-            # if player.direction == player.next_direction:
-            #     player.next_direction = 'right'
-            # player.direction = player.next_direction
-        print 5, list_of_possibles_moves, player.direction
         try:
             player.direction = list_of_possibles_moves[0]
         except IndexError:
@@ -206,6 +189,7 @@ class Game(object):
         # start a new game
         self.all_sprites = pg.sprite.LayeredUpdates()
         self.walls = pg.sprite.Group()
+        self.mobs = pg.sprite.Group()
         with open('map.txt') as map:
             self.map_list = map.readlines()
             self.width = (len(self.map_list[0]) - 1) * self.tilesize
@@ -220,6 +204,8 @@ class Game(object):
                     Wall(self, x, y, self.tilesize, self.tilesize)
                 elif value == 'p':
                     self.player = Player(self, x, y)
+                elif value == 'm':
+                    Mob(self, x, y)
 
     def run(self):
         # game loop - set  self.playing = False to end the game
@@ -254,9 +240,13 @@ class Game(object):
 
     def update(self):
         # update portion of the game loop
+        print self.all_sprites, self.mobs
         self.all_sprites.update()
         handle_collisions(self.player, self.walls)
         self.player.update_for_draw()
+        for mob in self.mobs:
+            handle_collisions(mob, self.walls)
+            mob.update_for_draw()
 
     def draw(self):
         self.screen.fill(SCREEN['BGCOLOR'])

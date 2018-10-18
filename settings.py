@@ -24,12 +24,17 @@ SCREEN = {
 
 # Player
 PLAYER = {
-    'LAYER': 2,
+    'layer': 2,
     'color': YELLOW,
-    'speed': 8,
     'time_to_move': 1000
 }
 
+# Mobs:
+MOB = {
+    'layer': 2,
+    'color': RED,
+    'time_to_move': 1000
+}
 
 # Walls:
 WALLS = {
