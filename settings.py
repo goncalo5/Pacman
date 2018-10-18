@@ -18,7 +18,7 @@ GAME = {
 SCREEN = {
     # 'WIDTH': 360,
     # 'HEIGHT': 480,
-    'FPS': 30,
+    'FPS': 60,
     'BGCOLOR': DARKBLUE
 }
 

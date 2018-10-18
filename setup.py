@@ -49,7 +49,9 @@ class Animated(pg.sprite.Sprite):
     def update(self):
         if self.game.now - self.update_time > self.group['time_to_move']:
             self.update_time = self.game.now
-            handle_collisions(self, self.game.walls)
+            list_of_possibles_moves =\
+                check_possibles_moves(self, self.game.walls)
+            self.direction = choice(list_of_possibles_moves)
             self.vel = self.convert_direction2vel()
             self.pos += self.vel
             self.update_for_draw()
@@ -73,25 +75,30 @@ class Player(Animated):
         keys = pg.key.get_pressed()
         if keys[pg.K_LEFT]:
             self.next_direction = 'left'
-            self.direction = 'left'
+            # self.direction = 'left'
         if keys[pg.K_RIGHT]:
             self.next_direction = 'right'
-            self.direction = 'right'
+            # self.direction = 'right'
         if keys[pg.K_UP]:
             self.next_direction = 'up'
-            self.direction = 'up'
+            # self.direction = 'up'
         if keys[pg.K_DOWN]:
             self.next_direction = 'down'
-            self.direction = 'down'
+            # self.direction = 'down'
 
     def update(self):
+        self.events()
         if self.game.now - self.update_time > PLAYER['time_to_move']:
             self.update_time = self.game.now
+
+            list_of_possibles_moves =\
+                check_possibles_moves(self, self.game.walls)
+            self.direction = choice(list_of_possibles_moves)
+            if self.next_direction in list_of_possibles_moves:
+                self.direction = self.next_direction
             self.vel = self.convert_direction2vel()
             self.pos += self.vel
-            handle_collisions(self, self.game.walls)
             self.update_for_draw()
-        self.events()
 
 #####################################################
 # Collisions:
@@ -149,32 +156,6 @@ def convert_direction_to_inverse(direction):
     if direction == 'up':
         return 'down'
 
-
-def handle_collisions(animated, walls):
-    list_of_possibles_moves = check_possibles_moves(animated, walls)
-    if isinstance(animated, Player):
-        list_of_possibles_moves =\
-            remove_self_direction(animated, list_of_possibles_moves)
-    animated.rect.topleft = animated.pos
-    hits = pg.sprite.spritecollide(animated, walls, False)
-    if hits:
-        wall = hits[0]
-        if animated.direction == 'right':
-            animated.pos.x = wall.rect.left - animated.rect.width
-        elif animated.direction == 'down':
-            animated.pos.y = wall.rect.top - animated.rect.height
-        elif animated.direction == 'left':
-            animated.pos.x = wall.rect.right
-        elif animated.direction == 'up':
-            animated.pos.y = wall.rect.bottom
-        try:
-            animated.direction = choice(list_of_possibles_moves)
-        except IndexError:
-            animated.direction = 'up'
-    # animated.direction = 'stop'
-    if isinstance(animated, Mob):
-        print animated.direction, list_of_possibles_moves
-        animated.direction = choice(list_of_possibles_moves)
 #
 # End of Collisions
 ####################################################
@@ -259,11 +240,6 @@ class Game(object):
     def update(self):
         # update portion of the game loop
         self.all_sprites.update()
-        # handle_collisions(self.player, self.walls)
-        # self.player.update_for_draw()
-        # for mob in self.mobs:
-        # handle_collisions(mob, self.walls)
-        # mob.update_for_draw()
 
     def draw(self):
         self.screen.fill(SCREEN['BGCOLOR'])
