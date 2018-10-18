@@ -26,7 +26,7 @@ SCREEN = {
 PLAYER = {
     'layer': 2,
     'color': YELLOW,
-    'time_to_move': 1000
+    'time_to_move': 500
 }
 
 # Mobs:

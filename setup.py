@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from os import path
+from random import choice
 import pygame as pg
 from settings import GAME, SCREEN, WALLS, PLAYER, MOB
 vec = pg.math.Vector2
@@ -48,8 +49,10 @@ class Animated(pg.sprite.Sprite):
     def update(self):
         if self.game.now - self.update_time > self.group['time_to_move']:
             self.update_time = self.game.now
+            handle_collisions(self, self.game.walls)
             self.vel = self.convert_direction2vel()
             self.pos += self.vel
+            self.update_for_draw()
 
     def update_for_draw(self):
         self.rect.topleft = self.pos
@@ -86,6 +89,8 @@ class Player(Animated):
             self.update_time = self.game.now
             self.vel = self.convert_direction2vel()
             self.pos += self.vel
+            handle_collisions(self, self.game.walls)
+            self.update_for_draw()
         self.events()
 
 #####################################################
@@ -93,35 +98,42 @@ class Player(Animated):
 #
 
 
-def check_possibles_moves(player, walls):
+def check_possibles_moves(animated, walls):
     list_of_possibles_moves = []
     # check up:
-    player.rect.y -= 1
-    if not pg.sprite.spritecollide(player, walls, False):
+    animated.rect.y -= 1
+    if not pg.sprite.spritecollide(animated, walls, False):
         list_of_possibles_moves.append('up')
-    player.rect.y += 1
+    animated.rect.y += 1
     # check down:
-    player.rect.y += 1
-    if not pg.sprite.spritecollide(player, walls, False):
+    animated.rect.y += 1
+    if not pg.sprite.spritecollide(animated, walls, False):
         list_of_possibles_moves.append('down')
-    player.rect.y -= 1
+    animated.rect.y -= 1
     # check right:
-    player.rect.x += 1
-    if not pg.sprite.spritecollide(player, walls, False):
+    animated.rect.x += 1
+    if not pg.sprite.spritecollide(animated, walls, False):
         list_of_possibles_moves.append('right')
-    player.rect.x -= 1
+    animated.rect.x -= 1
     # check left:
-    player.rect.x -= 1
-    if not pg.sprite.spritecollide(player, walls, False):
+    animated.rect.x -= 1
+    if not pg.sprite.spritecollide(animated, walls, False):
         list_of_possibles_moves.append('left')
-    player.rect.x += 1
-    try:
-        list_of_possibles_moves.remove(player.direction)
-    except ValueError:
-        pass
+    animated.rect.x += 1
+
     try:
         list_of_possibles_moves.remove(
-            convert_direction_to_inverse(player.direction))
+            convert_direction_to_inverse(animated.direction))
+    except ValueError:
+        print 123
+        pass
+    return list_of_possibles_moves
+
+
+def remove_self_direction(animated, list_of_possibles_moves):
+
+    try:
+        list_of_possibles_moves.remove(animated.direction)
     except ValueError:
         pass
     return list_of_possibles_moves
@@ -138,25 +150,31 @@ def convert_direction_to_inverse(direction):
         return 'down'
 
 
-def handle_collisions(player, walls):
-    list_of_possibles_moves = check_possibles_moves(player, walls)
-    player.rect.topleft = player.pos
-    hits = pg.sprite.spritecollide(player, walls, False)
+def handle_collisions(animated, walls):
+    list_of_possibles_moves = check_possibles_moves(animated, walls)
+    if isinstance(animated, Player):
+        list_of_possibles_moves =\
+            remove_self_direction(animated, list_of_possibles_moves)
+    animated.rect.topleft = animated.pos
+    hits = pg.sprite.spritecollide(animated, walls, False)
     if hits:
         wall = hits[0]
-        if player.direction == 'right':
-            player.pos.x = wall.rect.left - player.rect.width
-        elif player.direction == 'down':
-            player.pos.y = wall.rect.top - player.rect.height
-        elif player.direction == 'left':
-            player.pos.x = wall.rect.right
-        elif player.direction == 'up':
-            player.pos.y = wall.rect.bottom
+        if animated.direction == 'right':
+            animated.pos.x = wall.rect.left - animated.rect.width
+        elif animated.direction == 'down':
+            animated.pos.y = wall.rect.top - animated.rect.height
+        elif animated.direction == 'left':
+            animated.pos.x = wall.rect.right
+        elif animated.direction == 'up':
+            animated.pos.y = wall.rect.bottom
         try:
-            player.direction = list_of_possibles_moves[0]
+            animated.direction = choice(list_of_possibles_moves)
         except IndexError:
-            player.direction = 'up'
-    # player.direction = 'stop'
+            animated.direction = 'up'
+    # animated.direction = 'stop'
+    if isinstance(animated, Mob):
+        print animated.direction, list_of_possibles_moves
+        animated.direction = choice(list_of_possibles_moves)
 #
 # End of Collisions
 ####################################################
@@ -240,13 +258,12 @@ class Game(object):
 
     def update(self):
         # update portion of the game loop
-        print self.all_sprites, self.mobs
         self.all_sprites.update()
-        handle_collisions(self.player, self.walls)
-        self.player.update_for_draw()
-        for mob in self.mobs:
-            handle_collisions(mob, self.walls)
-            mob.update_for_draw()
+        # handle_collisions(self.player, self.walls)
+        # self.player.update_for_draw()
+        # for mob in self.mobs:
+        # handle_collisions(mob, self.walls)
+        # mob.update_for_draw()
 
     def draw(self):
         self.screen.fill(SCREEN['BGCOLOR'])
