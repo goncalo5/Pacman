@@ -33,6 +33,7 @@ class Animated(pg.sprite.Sprite):
         self.direction = 'right'
         self.next_direction = 'down'
         self.update_time = self.game.now
+        self.update_time2forget = self.game.now
 
         self.rect.topleft = self.pos
 
@@ -51,6 +52,10 @@ class Animated(pg.sprite.Sprite):
             self.update_time = self.game.now
             list_of_possibles_moves =\
                 check_possibles_moves(self, self.game.walls)
+            list_of_possibles_moves =\
+                remove_inverse_from_possible_moves(
+                    self, list_of_possibles_moves)
+
             self.direction = choice(list_of_possibles_moves)
             self.vel = self.convert_direction2vel()
             self.pos += self.vel
@@ -75,27 +80,39 @@ class Player(Animated):
         keys = pg.key.get_pressed()
         if keys[pg.K_LEFT]:
             self.next_direction = 'left'
-            # self.direction = 'left'
+            self.update_time2forget = self.game.now
         if keys[pg.K_RIGHT]:
             self.next_direction = 'right'
-            # self.direction = 'right'
+            self.update_time2forget = self.game.now
         if keys[pg.K_UP]:
             self.next_direction = 'up'
-            # self.direction = 'up'
+            self.update_time2forget = self.game.now
         if keys[pg.K_DOWN]:
             self.next_direction = 'down'
-            # self.direction = 'down'
+            self.update_time2forget = self.game.now
 
     def update(self):
         self.events()
+        if self.game.now - self.update_time2forget >\
+                PLAYER['time_to_forget_move']:
+            self.update_time2forget = self.game.now
+            self.next_direction = None
+
         if self.game.now - self.update_time > PLAYER['time_to_move']:
             self.update_time = self.game.now
 
             list_of_possibles_moves =\
                 check_possibles_moves(self, self.game.walls)
-            self.direction = choice(list_of_possibles_moves)
             if self.next_direction in list_of_possibles_moves:
                 self.direction = self.next_direction
+            elif self.direction in list_of_possibles_moves:
+                pass
+            else:
+                list_of_possibles_moves =\
+                    remove_inverse_from_possible_moves(
+                        self, list_of_possibles_moves)
+                self.direction = choice(list_of_possibles_moves)
+
             self.vel = self.convert_direction2vel()
             self.pos += self.vel
             self.update_for_draw()
@@ -127,7 +144,10 @@ def check_possibles_moves(animated, walls):
     if not pg.sprite.spritecollide(animated, walls, False):
         list_of_possibles_moves.append('left')
     animated.rect.x += 1
+    return list_of_possibles_moves
 
+
+def remove_inverse_from_possible_moves(animated, list_of_possibles_moves):
     try:
         list_of_possibles_moves.remove(
             convert_direction_to_inverse(animated.direction))
