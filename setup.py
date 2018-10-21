@@ -2,7 +2,7 @@
 from os import path
 from random import choice
 import pygame as pg
-from settings import GAME, SCREEN, WALLS, PLAYER, MOB
+from settings import GAME, SCREEN, WALLS, PLAYER, MOB, RED
 vec = pg.math.Vector2
 
 
@@ -226,14 +226,20 @@ class Game(object):
                 elif value == 'm':
                     Mob(self, x, y)
 
+    def pause(self):
+        self.draw_text('paused', 50, RED,
+                       self.width / 2, self.height / 2, GAME['font'])
+
     def run(self):
         # game loop - set  self.playing = False to end the game
         self.running = True
+        self.paused = False
         while self.running:
             self.clock.tick(SCREEN['FPS'])
             self.now = pg.time.get_ticks()
             self.events()
-            self.update()
+            if not self.paused:
+                self.update()
             self.draw()
 
     def events(self):
@@ -253,6 +259,9 @@ class Game(object):
                 # force quit
                 quit()
 
+            if event.key == pg.K_p:
+                self.paused = not self.paused
+
         if event.type == pg.KEYUP:
             if event.key == 310:
                 self.cmd_key_down = False
@@ -261,9 +270,21 @@ class Game(object):
         # update portion of the game loop
         self.all_sprites.update()
 
+    def draw_text(self, text, size, color, x, y, font='freesansbold.ttf'):
+        try:
+            font = pg.font.Font(font, size)
+        except IOError:
+            font = pg.font.SysFont(font, size)
+        text_surface = font.render(text, True, color)
+        text_rect = text_surface.get_rect()
+        text_rect.midtop = (x, y)
+        self.screen.blit(text_surface, text_rect)
+
     def draw(self):
         self.screen.fill(SCREEN['BGCOLOR'])
         self.all_sprites.draw(self.screen)
+        if self.paused:
+            self.pause()
 
         pg.display.flip()
 

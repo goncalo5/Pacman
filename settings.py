@@ -10,7 +10,8 @@ YELLOW = (255, 255, 0)
 # Game
 GAME = {
     'NAME': "My Game",
-    'TILESIZE': 32
+    'TILESIZE': 32,
+    'font': 'comicsansms'
 }
 
 
