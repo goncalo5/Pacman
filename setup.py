@@ -2,7 +2,7 @@
 from os import path
 from random import choice
 import pygame as pg
-from settings import GAME, SCREEN, WALLS, PLAYER, MOB, RED
+from settings import GAME, SCREEN, WALLS, PLAYER, MOB, PACDOTS, RED
 vec = pg.math.Vector2
 
 
@@ -113,9 +113,25 @@ class Player(Animated):
                         self, list_of_possibles_moves)
                 self.direction = choice(list_of_possibles_moves)
 
+            # collide with PacDot:
+            pg.sprite.spritecollide(self, self.game.pacdots, True)
+
             self.vel = self.convert_direction2vel()
             self.pos += self.vel
             self.update_for_draw()
+
+
+class PacDot(pg.sprite.Sprite):
+    def __init__(self, game, x, y):
+        self._layer = PACDOTS['layer']
+        self.groups = game.all_sprites, game.pacdots
+        super(PacDot, self).__init__(self.groups)
+        self.game = game
+        self.image = pg.Surface(PACDOTS['size'])
+        self.image.fill(PACDOTS['color'])
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
+
 
 #####################################################
 # Collisions:
@@ -209,6 +225,7 @@ class Game(object):
         self.all_sprites = pg.sprite.LayeredUpdates()
         self.walls = pg.sprite.Group()
         self.mobs = pg.sprite.Group()
+        self.pacdots = pg.sprite.Group()
         with open('map.txt') as map:
             self.map_list = map.readlines()
             self.width = (len(self.map_list[0]) - 1) * self.tilesize
@@ -219,21 +236,27 @@ class Game(object):
             for j, value in enumerate(line[:-1]):
                 x = j * self.tilesize
                 y = i * self.tilesize
+                x_center = x + self.tilesize / 2.
+                y_center = y + self.tilesize / 2.
                 if value == 'w':
                     Wall(self, x, y, self.tilesize, self.tilesize)
                 elif value == 'p':
                     self.player = Player(self, x, y)
                 elif value == 'm':
                     Mob(self, x, y)
+                    PacDot(self, x_center, y_center)
+                else:
+                    PacDot(self, x_center, y_center)
 
     def pause(self):
-        self.draw_text('paused', 50, RED,
+        self.draw_text(self.paused_msg, 50, RED,
                        self.width / 2, self.height / 2, GAME['font'])
 
     def run(self):
         # game loop - set  self.playing = False to end the game
         self.running = True
         self.paused = False
+        self.paused_msg = None
         while self.running:
             self.clock.tick(SCREEN['FPS'])
             self.now = pg.time.get_ticks()
@@ -261,6 +284,7 @@ class Game(object):
 
             if event.key == pg.K_p:
                 self.paused = not self.paused
+                self.paused_msg = 'Paused'
 
         if event.type == pg.KEYUP:
             if event.key == 310:
@@ -269,6 +293,9 @@ class Game(object):
     def update(self):
         # update portion of the game loop
         self.all_sprites.update()
+        if not self.pacdots:
+            self.paused = not self.paused
+            self.paused_msg = 'YOU WIN'
 
     def draw_text(self, text, size, color, x, y, font='freesansbold.ttf'):
         try:

@@ -23,11 +23,17 @@ SCREEN = {
     'BGCOLOR': DARKBLUE
 }
 
+# Walls:
+WALLS = {
+    'layer': 2,
+    'color': GREEN
+}
+
 # Player
 PLAYER = {
     'layer': 2,
     'color': YELLOW,
-    'time_to_move': 300,
+    'time_to_move': 200,
     'time_to_forget_move': 2000
 }
 
@@ -38,8 +44,8 @@ MOB = {
     'time_to_move': 1000
 }
 
-# Walls:
-WALLS = {
-    'layer': 2,
-    'color': GREEN
+PACDOTS = {
+    'layer': 1,
+    'color': WHITE,
+    'size': (5, 5)
 }
