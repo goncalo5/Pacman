@@ -93,6 +93,13 @@ class Player(Animated):
 
     def update(self):
         self.events()
+
+        # collid_with_mob:
+        hits = pg.sprite.spritecollide(self, self.game.mobs, False)
+        if hits:
+            self.game.paused = True
+            self.game.paused_msg = 'Game Over'
+
         if self.game.now - self.update_time2forget >\
                 PLAYER['time_to_forget_move']:
             self.update_time2forget = self.game.now
@@ -294,7 +301,7 @@ class Game(object):
         # update portion of the game loop
         self.all_sprites.update()
         if not self.pacdots:
-            self.paused = not self.paused
+            self.paused = True
             self.paused_msg = 'YOU WIN'
 
     def draw_text(self, text, size, color, x, y, font='freesansbold.ttf'):

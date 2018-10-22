@@ -39,7 +39,7 @@ PLAYER = {
 
 # Mobs:
 MOB = {
-    'layer': 2,
+    'layer': 3,
     'color': RED,
     'time_to_move': 1000
 }
