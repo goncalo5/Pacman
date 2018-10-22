@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 from os import path
+from random import choice
 import pygame as pg
-from settings import GAME, SCREEN, WALLS, PLAYER, MOB
+from settings import GAME, SCREEN, WALLS, PLAYER, MOB, PACDOTS, RED
 vec = pg.math.Vector2
 
 
@@ -32,6 +33,7 @@ class Animated(pg.sprite.Sprite):
         self.direction = 'right'
         self.next_direction = 'down'
         self.update_time = self.game.now
+        self.update_time2forget = self.game.now
 
         self.rect.topleft = self.pos
 
@@ -48,8 +50,16 @@ class Animated(pg.sprite.Sprite):
     def update(self):
         if self.game.now - self.update_time > self.group['time_to_move']:
             self.update_time = self.game.now
+            list_of_possibles_moves =\
+                check_possibles_moves(self, self.game.walls)
+            list_of_possibles_moves =\
+                remove_inverse_from_possible_moves(
+                    self, list_of_possibles_moves)
+
+            self.direction = choice(list_of_possibles_moves)
             self.vel = self.convert_direction2vel()
             self.pos += self.vel
+            self.update_for_draw()
 
     def update_for_draw(self):
         self.rect.topleft = self.pos
@@ -70,58 +80,110 @@ class Player(Animated):
         keys = pg.key.get_pressed()
         if keys[pg.K_LEFT]:
             self.next_direction = 'left'
-            self.direction = 'left'
+            self.update_time2forget = self.game.now
         if keys[pg.K_RIGHT]:
             self.next_direction = 'right'
-            self.direction = 'right'
+            self.update_time2forget = self.game.now
         if keys[pg.K_UP]:
             self.next_direction = 'up'
-            self.direction = 'up'
+            self.update_time2forget = self.game.now
         if keys[pg.K_DOWN]:
             self.next_direction = 'down'
-            self.direction = 'down'
+            self.update_time2forget = self.game.now
 
     def update(self):
+        self.events()
+
+        # collid_with_mob:
+        hits = pg.sprite.spritecollide(self, self.game.mobs, False)
+        if hits:
+            self.game.paused = True
+            self.game.paused_msg = 'Game Over'
+
+        if self.game.now - self.update_time2forget >\
+                PLAYER['time_to_forget_move']:
+            self.update_time2forget = self.game.now
+            self.next_direction = None
+
         if self.game.now - self.update_time > PLAYER['time_to_move']:
             self.update_time = self.game.now
+
+            list_of_possibles_moves =\
+                check_possibles_moves(self, self.game.walls)
+            if self.next_direction in list_of_possibles_moves:
+                self.direction = self.next_direction
+            elif self.direction in list_of_possibles_moves:
+                pass
+            else:
+                list_of_possibles_moves =\
+                    remove_inverse_from_possible_moves(
+                        self, list_of_possibles_moves)
+                self.direction = choice(list_of_possibles_moves)
+
+            # collide with PacDot:
+            pg.sprite.spritecollide(self, self.game.pacdots, True)
+
             self.vel = self.convert_direction2vel()
             self.pos += self.vel
-        self.events()
+            self.update_for_draw()
+
+
+class PacDot(pg.sprite.Sprite):
+    def __init__(self, game, x, y):
+        self._layer = PACDOTS['layer']
+        self.groups = game.all_sprites, game.pacdots
+        super(PacDot, self).__init__(self.groups)
+        self.game = game
+        self.image = pg.Surface(PACDOTS['size'])
+        self.image.fill(PACDOTS['color'])
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)
+
 
 #####################################################
 # Collisions:
 #
 
 
-def check_possibles_moves(player, walls):
+def check_possibles_moves(animated, walls):
     list_of_possibles_moves = []
     # check up:
-    player.rect.y -= 1
-    if not pg.sprite.spritecollide(player, walls, False):
+    animated.rect.y -= 1
+    if not pg.sprite.spritecollide(animated, walls, False):
         list_of_possibles_moves.append('up')
-    player.rect.y += 1
+    animated.rect.y += 1
     # check down:
-    player.rect.y += 1
-    if not pg.sprite.spritecollide(player, walls, False):
+    animated.rect.y += 1
+    if not pg.sprite.spritecollide(animated, walls, False):
         list_of_possibles_moves.append('down')
-    player.rect.y -= 1
+    animated.rect.y -= 1
     # check right:
-    player.rect.x += 1
-    if not pg.sprite.spritecollide(player, walls, False):
+    animated.rect.x += 1
+    if not pg.sprite.spritecollide(animated, walls, False):
         list_of_possibles_moves.append('right')
-    player.rect.x -= 1
+    animated.rect.x -= 1
     # check left:
-    player.rect.x -= 1
-    if not pg.sprite.spritecollide(player, walls, False):
+    animated.rect.x -= 1
+    if not pg.sprite.spritecollide(animated, walls, False):
         list_of_possibles_moves.append('left')
-    player.rect.x += 1
-    try:
-        list_of_possibles_moves.remove(player.direction)
-    except ValueError:
-        pass
+    animated.rect.x += 1
+    return list_of_possibles_moves
+
+
+def remove_inverse_from_possible_moves(animated, list_of_possibles_moves):
     try:
         list_of_possibles_moves.remove(
-            convert_direction_to_inverse(player.direction))
+            convert_direction_to_inverse(animated.direction))
+    except ValueError:
+        print 123
+        pass
+    return list_of_possibles_moves
+
+
+def remove_self_direction(animated, list_of_possibles_moves):
+
+    try:
+        list_of_possibles_moves.remove(animated.direction)
     except ValueError:
         pass
     return list_of_possibles_moves
@@ -137,26 +199,6 @@ def convert_direction_to_inverse(direction):
     if direction == 'up':
         return 'down'
 
-
-def handle_collisions(player, walls):
-    list_of_possibles_moves = check_possibles_moves(player, walls)
-    player.rect.topleft = player.pos
-    hits = pg.sprite.spritecollide(player, walls, False)
-    if hits:
-        wall = hits[0]
-        if player.direction == 'right':
-            player.pos.x = wall.rect.left - player.rect.width
-        elif player.direction == 'down':
-            player.pos.y = wall.rect.top - player.rect.height
-        elif player.direction == 'left':
-            player.pos.x = wall.rect.right
-        elif player.direction == 'up':
-            player.pos.y = wall.rect.bottom
-        try:
-            player.direction = list_of_possibles_moves[0]
-        except IndexError:
-            player.direction = 'up'
-    # player.direction = 'stop'
 #
 # End of Collisions
 ####################################################
@@ -190,6 +232,7 @@ class Game(object):
         self.all_sprites = pg.sprite.LayeredUpdates()
         self.walls = pg.sprite.Group()
         self.mobs = pg.sprite.Group()
+        self.pacdots = pg.sprite.Group()
         with open('map.txt') as map:
             self.map_list = map.readlines()
             self.width = (len(self.map_list[0]) - 1) * self.tilesize
@@ -200,21 +243,33 @@ class Game(object):
             for j, value in enumerate(line[:-1]):
                 x = j * self.tilesize
                 y = i * self.tilesize
+                x_center = x + self.tilesize / 2.
+                y_center = y + self.tilesize / 2.
                 if value == 'w':
                     Wall(self, x, y, self.tilesize, self.tilesize)
                 elif value == 'p':
                     self.player = Player(self, x, y)
                 elif value == 'm':
                     Mob(self, x, y)
+                    PacDot(self, x_center, y_center)
+                else:
+                    PacDot(self, x_center, y_center)
+
+    def pause(self):
+        self.draw_text(self.paused_msg, 50, RED,
+                       self.width / 2, self.height / 2, GAME['font'])
 
     def run(self):
         # game loop - set  self.playing = False to end the game
         self.running = True
+        self.paused = False
+        self.paused_msg = None
         while self.running:
             self.clock.tick(SCREEN['FPS'])
             self.now = pg.time.get_ticks()
             self.events()
-            self.update()
+            if not self.paused:
+                self.update()
             self.draw()
 
     def events(self):
@@ -234,23 +289,36 @@ class Game(object):
                 # force quit
                 quit()
 
+            if event.key == pg.K_p:
+                self.paused = not self.paused
+                self.paused_msg = 'Paused'
+
         if event.type == pg.KEYUP:
             if event.key == 310:
                 self.cmd_key_down = False
 
     def update(self):
         # update portion of the game loop
-        print self.all_sprites, self.mobs
         self.all_sprites.update()
-        handle_collisions(self.player, self.walls)
-        self.player.update_for_draw()
-        for mob in self.mobs:
-            handle_collisions(mob, self.walls)
-            mob.update_for_draw()
+        if not self.pacdots:
+            self.paused = True
+            self.paused_msg = 'YOU WIN'
+
+    def draw_text(self, text, size, color, x, y, font='freesansbold.ttf'):
+        try:
+            font = pg.font.Font(font, size)
+        except IOError:
+            font = pg.font.SysFont(font, size)
+        text_surface = font.render(text, True, color)
+        text_rect = text_surface.get_rect()
+        text_rect.midtop = (x, y)
+        self.screen.blit(text_surface, text_rect)
 
     def draw(self):
         self.screen.fill(SCREEN['BGCOLOR'])
         self.all_sprites.draw(self.screen)
+        if self.paused:
+            self.pause()
 
         pg.display.flip()
 
