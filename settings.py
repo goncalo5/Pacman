@@ -33,7 +33,7 @@ WALLS = {
 PLAYER = {
     'layer': 2,
     'color': YELLOW,
-    'time_to_move': 200,
+    'time_to_move': 500,
     'time_to_forget_move': 2000
 }
 

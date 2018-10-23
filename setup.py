@@ -2,6 +2,8 @@
 from os import path
 from random import choice
 import pygame as pg
+import pytmx
+from pytmx.util_pygame import load_pygame
 from settings import GAME, SCREEN, WALLS, PLAYER, MOB, PACDOTS, RED
 vec = pg.math.Vector2
 
@@ -12,9 +14,11 @@ class Wall(pg.sprite.Sprite):
         self.groups = game.all_sprites, game.walls
         super(Wall, self).__init__(self.groups)
         self.game = game
-        self.image = pg.Surface((width, height))
-        self.image.fill(WALLS['color'])
-        self.rect = self.image.get_rect()
+        # self.image = pg.Surface((width, height))
+        # self.image.fill(WALLS['color'])
+        # self.rect = self.image.get_rect()
+
+        self.rect = pg.Rect(x, y, width, height)
         self.rect.topleft = (x, y)
 
 
@@ -25,17 +29,17 @@ class Animated(pg.sprite.Sprite):
         super(Animated, self).__init__(self.groups)
         self.game = game
         self.group = group
-        self.image = pg.Surface((GAME['TILESIZE'], GAME['TILESIZE']))
-        self.image.fill(group['color'])
-        self.rect = self.image.get_rect()
-        self.pos = vec(x, y)
-        self.vel = vec(0, 0)
-        self.direction = 'right'
-        self.next_direction = 'down'
-        self.update_time = self.game.now
-        self.update_time2forget = self.game.now
+        # self.image = pg.Surface((GAME['TILESIZE'], GAME['TILESIZE']))
+        # self.image.fill(group['color'])
+        # self.rect = self.image.get_rect()
+        # self.pos = vec(x, y)
+        # self.vel = vec(0, 0)
+        # self.direction = 'right'
+        # self.next_direction = 'down'
+        # self.update_time = self.game.now
+        # self.update_time2forget = self.game.now
 
-        self.rect.topleft = self.pos
+        # self.rect.topleft = self.pos
 
     def convert_direction2vel(self):
         converter = {
@@ -69,12 +73,32 @@ class Mob(Animated):
     def __init__(self, game, x, y):
         groups = game.all_sprites, game.mobs
         super(Mob, self).__init__(game, x, y, MOB, groups)
+        self.image = game.mob_img
+        self.rect = self.image.get_rect()
+        self.pos = vec(x, y)
+        self.vel = vec(0, 0)
+        self.direction = 'right'
+        self.next_direction = 'right'
+        self.update_time = self.game.now
+        self.update_time2forget = self.game.now
+
+        self.rect.topleft = self.pos
 
 
 class Player(Animated):
     def __init__(self, game, x, y):
         groups = game.all_sprites
         super(Player, self).__init__(game, x, y, PLAYER, groups)
+        self.image = game.player_img
+        self.rect = self.image.get_rect()
+        self.pos = vec(x, y)
+        self.vel = vec(0, 0)
+        self.direction = 'right'
+        self.next_direction = 'down'
+        self.update_time = self.game.now
+        self.update_time2forget = self.game.now
+
+        self.rect.topleft = self.pos
 
     def events(self):
         keys = pg.key.get_pressed()
@@ -146,6 +170,8 @@ class PacDot(pg.sprite.Sprite):
 
 
 def check_possibles_moves(animated, walls):
+    # for wall in walls:
+    #     print wall.rect
     list_of_possibles_moves = []
     # check up:
     animated.rect.y -= 1
@@ -167,6 +193,7 @@ def check_possibles_moves(animated, walls):
     if not pg.sprite.spritecollide(animated, walls, False):
         list_of_possibles_moves.append('left')
     animated.rect.x += 1
+
     return list_of_possibles_moves
 
 
@@ -175,7 +202,7 @@ def remove_inverse_from_possible_moves(animated, list_of_possibles_moves):
         list_of_possibles_moves.remove(
             convert_direction_to_inverse(animated.direction))
     except ValueError:
-        print 123
+        print 123, animated.rect
         pass
     return list_of_possibles_moves
 
@@ -204,15 +231,40 @@ def convert_direction_to_inverse(direction):
 ####################################################
 
 
+class TiledMap(object):
+    def __init__(self, filename):
+        tm = load_pygame(filename, pixelalpha=True)
+        self.tilesize = tm.tilewidth
+        self.width = tm.width * tm.tilewidth
+        self.height = tm.height * tm.tileheight
+        self.tmxdata = tm
+
+    def render(self, surface):
+        ti = self.tmxdata.get_tile_image_by_gid
+        for layer in self.tmxdata.visible_layers:
+            if isinstance(layer, pytmx.TiledTileLayer):
+                for x, y, gid, in layer:
+                    tile = ti(gid)
+                    if tile:
+                        surface.blit(tile, (x * self.tmxdata.tilewidth,
+                                            y * self.tmxdata.tileheight))
+
+    def make_map(self):
+        temp_surface = pg.Surface((self.width, self.height))
+        self.render(temp_surface)
+        return temp_surface
+
+
 class Game(object):
     def __init__(self):
         pg.init()
         # variables
-        self.tilesize = GAME['TILESIZE']
+        # self.tilesize = GAME['TILESIZE']
         # self.width = SCREEN['WIDTH']
         # self.height = SCREEN['HEIGHT']
         self.cmd_key_down = False
 
+        self.screen = pg.display.set_mode((200, 200))
         pg.display.set_caption(GAME['NAME'])
         self.clock = pg.time.Clock()
         self.now = pg.time.get_ticks()
@@ -223,37 +275,81 @@ class Game(object):
 
         pg.quit()
 
+    def load_a_thing(self, thing_file, thing_dir_list):
+        thing_dir = self.dir
+        for dir in thing_dir_list:
+            thing_dir = path.join(thing_dir, dir)
+        thing_path = path.join(thing_dir, thing_file)
+        return thing_path
+
+    def load_a_image(self, thing_file, thing_dir_list=['img'],
+                     thing_size=None):
+        thing_path = self.load_a_thing(thing_file, thing_dir_list)
+        thing_img = pg.image.load(thing_path).convert_alpha()
+        if thing_size:
+            thing_img = pg.transform.scale(thing_img, thing_size)
+        return thing_img
+
     def load_data(self):
         self.dir = path.dirname(__file__)
+        # player:
+        self.player_img = self.load_a_image(
+            'rosekane_89.png', ['img', 'spr_all5_4A2_separate images'])
+        self.mob_img = self.load_a_image(
+            'rosekane_44.png', ['img', 'spr_all5_4A2_separate images'])
+        # sounds:
         pg.mixer.init()  # for sound
 
     def new(self):
+        print 'new'
         # start a new game
         self.all_sprites = pg.sprite.LayeredUpdates()
         self.walls = pg.sprite.Group()
         self.mobs = pg.sprite.Group()
         self.pacdots = pg.sprite.Group()
-        with open('map.txt') as map:
-            self.map_list = map.readlines()
-            self.width = (len(self.map_list[0]) - 1) * self.tilesize
-            self.height = (len(self.map_list)) * self.tilesize
-        self.screen = pg.display.set_mode((self.width, self.height))
+        # with open('map.txt') as map:
+        #     self.map_list = map.readlines()
+        #     self.width = (len(self.map_list[0]) - 1) * self.tilesize
+        #     self.height = (len(self.map_list)) * self.tilesize
 
-        for i, line in enumerate(self.map_list):
-            for j, value in enumerate(line[:-1]):
-                x = j * self.tilesize
-                y = i * self.tilesize
-                x_center = x + self.tilesize / 2.
-                y_center = y + self.tilesize / 2.
-                if value == 'w':
-                    Wall(self, x, y, self.tilesize, self.tilesize)
-                elif value == 'p':
-                    self.player = Player(self, x, y)
-                elif value == 'm':
-                    Mob(self, x, y)
-                    PacDot(self, x_center, y_center)
-                else:
-                    PacDot(self, x_center, y_center)
+        map_path = path.join('img', 'pacmac_map_test.tmx')
+        self.map = TiledMap(map_path)
+        self.tilesize = self.map.tilesize
+        self.width, self.height = self.map.width, self.map.height
+        self.screen = pg.display.set_mode((self.map.width, self.map.height))
+        self.map_img = self.map.make_map()
+        self.map_rect = self.map_img.get_rect()
+        for tile_object in self.map.tmxdata.objects:
+            x, y = tile_object.x, tile_object.y
+            x_center = x + self.tilesize / 2.
+            y_center = y + self.tilesize / 2.
+            obj_center = vec(tile_object.x + tile_object.width / 2,
+                             tile_object.y + tile_object.height / 2)
+            if tile_object.name == 'wall':
+                Wall(self, x, y, tile_object.width, tile_object.height)
+
+            if tile_object.name == 'player':
+                self.player = Player(self, x, y)
+            if tile_object.name == 'mob':
+                Mob(self, x, y)
+            if tile_object.name == 'pacdot':
+                PacDot(self, obj_center.x, obj_center.y)
+
+        # for i, line in enumerate(self.map_list):
+        #     for j, value in enumerate(line[:-1]):
+        #         x = j * self.tilesize
+        #         y = i * self.tilesize
+        #         x_center = x + self.tilesize / 2.
+        #         y_center = y + self.tilesize / 2.
+        #         if value == 'w':
+        #             Wall(self, x, y, self.tilesize, self.tilesize)
+        #         elif value == 'p':
+        #             self.player = Player(self, x, y)
+        #         elif value == 'm':
+        #             Mob(self, x, y)
+        #             PacDot(self, x_center, y_center)
+        #         else:
+        #             PacDot(self, x_center, y_center)
 
     def pause(self):
         self.draw_text(self.paused_msg, 50, RED,
@@ -315,8 +411,18 @@ class Game(object):
         self.screen.blit(text_surface, text_rect)
 
     def draw(self):
-        self.screen.fill(SCREEN['BGCOLOR'])
-        self.all_sprites.draw(self.screen)
+        # self.screen.fill(SCREEN['BGCOLOR'])
+        self.screen.blit(self.map_img, (0, 0))
+        # self.all_sprites.draw(self.screen)
+        for sprite in self.all_sprites:
+            try:
+                # sprite.draw(self.screen)
+                self.screen.blit(sprite.image, sprite.rect.topleft)
+            except AttributeError:
+                pass
+            except Exception as ex:
+                print ex
+        # exit()
         if self.paused:
             self.pause()
 
