@@ -202,7 +202,7 @@ def remove_inverse_from_possible_moves(animated, list_of_possibles_moves):
         list_of_possibles_moves.remove(
             convert_direction_to_inverse(animated.direction))
     except ValueError:
-        print 123, animated.rect
+        print(123, animated.rect)
         pass
     return list_of_possibles_moves
 
@@ -301,7 +301,7 @@ class Game(object):
         pg.mixer.init()  # for sound
 
     def new(self):
-        print 'new'
+        print('new')
         # start a new game
         self.all_sprites = pg.sprite.LayeredUpdates()
         self.walls = pg.sprite.Group()
@@ -421,7 +421,7 @@ class Game(object):
             except AttributeError:
                 pass
             except Exception as ex:
-                print ex
+                print(ex)
         # exit()
         if self.paused:
             self.pause()
